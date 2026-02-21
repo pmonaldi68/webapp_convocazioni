@@ -12,7 +12,8 @@ Apri `http://localhost:8000`.
 
 ## Funzionalità
 
-- Caricamento automatico di gare, giocatori, allenatori e dirigenti da Google Sheets pubblici.
-- Selezione della gara con filtro automatico per squadra.
+- Caricamento automatico da Google Sheets pubblici: squadre, gare, giocatori, allenatori e dirigenti.
+- Flusso guidato: prima selezione squadra, poi selezione gara.
+- Filtro automatico per mostrare solo giocatori/staff della squadra scelta.
 - Selezione rapida dei convocati.
 - Generazione messaggio pronto per copia/condivisione (WhatsApp o share nativa mobile).

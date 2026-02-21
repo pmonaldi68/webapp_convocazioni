@@ -1,4 +1,6 @@
 const SOURCES = {
+  squadre:
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pub?gid=698820797&single=true&output=csv",
   gare:
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pubhtml?gid=813287810&single=true",
   giocatori:
@@ -8,12 +10,15 @@ const SOURCES = {
 };
 
 const state = {
+  squadre: [],
   gare: [],
   giocatori: [],
   staff: [],
+  selectedTeam: "",
   selectedMatch: null
 };
 
+const teamSelect = document.getElementById("team-select");
 const matchSelect = document.getElementById("match-select");
 const matchInfo = document.getElementById("match-info");
 const playersList = document.getElementById("players-list");
@@ -22,7 +27,9 @@ const messageField = document.getElementById("message");
 const statusNode = document.getElementById("status");
 
 function toCsvUrl(pubHtmlUrl) {
-  return pubHtmlUrl.replace("/pubhtml", "/pub") + "&output=csv";
+  return pubHtmlUrl.includes("output=csv")
+    ? pubHtmlUrl
+    : `${pubHtmlUrl.replace("/pubhtml", "/pub")}&output=csv`;
 }
 
 function parseCsv(text) {
@@ -112,21 +119,58 @@ function renderCheckboxes(container, items, type) {
 }
 
 function filterByTeam(items, team) {
-  if (!team) return items;
+  if (!team) return [];
   return items.filter((item) => !item.squadra || item.squadra.toLowerCase() === team.toLowerCase());
+}
+
+function refreshMatchesForTeam() {
+  matchSelect.innerHTML = "";
+  messageField.value = "";
+
+  if (!state.selectedTeam) {
+    matchSelect.innerHTML = "<option value=''>Seleziona prima una squadra</option>";
+    state.selectedMatch = null;
+    renderCheckboxes(playersList, [], "player");
+    renderCheckboxes(staffList, [], "staff");
+    matchInfo.textContent = "";
+    return;
+  }
+
+  const filteredMatches = filterByTeam(state.gare, state.selectedTeam);
+
+  if (!filteredMatches.length) {
+    matchSelect.innerHTML = "<option value=''>Nessuna gara disponibile</option>";
+    state.selectedMatch = null;
+    renderCheckboxes(playersList, filterByTeam(state.giocatori, state.selectedTeam), "player");
+    renderCheckboxes(staffList, filterByTeam(state.staff, state.selectedTeam), "staff");
+    matchInfo.textContent = "Nessuna gara trovata per la squadra selezionata.";
+    return;
+  }
+
+  filteredMatches.forEach((match, index) => {
+    const option = document.createElement("option");
+    option.value = index;
+    option.textContent = matchLabel(match);
+    matchSelect.append(option);
+  });
+
+  state.selectedMatch = filteredMatches[0];
+  refreshSelections();
 }
 
 function refreshSelections() {
   const match = state.selectedMatch;
-  if (!match) return;
+  if (!state.selectedTeam) return;
 
-  const players = filterByTeam(state.giocatori, match.squadra);
-  const staff = filterByTeam(state.staff, match.squadra);
+  const players = filterByTeam(state.giocatori, state.selectedTeam);
+  const staff = filterByTeam(state.staff, state.selectedTeam);
 
   renderCheckboxes(playersList, players, "player");
   renderCheckboxes(staffList, staff, "staff");
 
-  matchInfo.textContent = `📍 ${match.luogo || "Luogo da definire"} • 🕒 ${match.ora || "Orario da definire"}`;
+  matchInfo.textContent = match
+    ? `📍 ${match.luogo || "Luogo da definire"} • 🕒 ${match.ora || "Orario da definire"}`
+    : "Seleziona una gara.";
 }
 
 function selectedNames(type) {
@@ -135,6 +179,11 @@ function selectedNames(type) {
 
 function generateMessage() {
   const match = state.selectedMatch;
+  if (!state.selectedTeam) {
+    setStatus("Seleziona prima una squadra.", true);
+    return;
+  }
+
   if (!match) {
     setStatus("Seleziona una gara.", true);
     return;
@@ -144,7 +193,7 @@ function generateMessage() {
   const staff = selectedNames("staff");
 
   const message = [
-    `📣 Convocazione ${match.squadra || "squadra"}`,
+    `📣 Convocazione ${state.selectedTeam}`,
     `📅 ${match.data || "Data da definire"} - 🕒 ${match.ora || "Orario da definire"}`,
     `⚽ ${match.avversario ? `Vs ${match.avversario}` : "Avversario da definire"}`,
     `📍 ${match.luogo || "Luogo da definire"}`,
@@ -224,36 +273,55 @@ function normalizePeople(rows, type) {
     .filter((row) => row.nome);
 }
 
+function normalizeTeams(rows) {
+  const unique = new Set();
+  rows.forEach((row) => {
+    const teamCol = pickColumn(row, ["squadra", "categoria", "team"]);
+    const teamName = (row[teamCol] || "").trim();
+    if (teamName) unique.add(teamName);
+  });
+  return [...unique];
+}
+
+function renderTeams() {
+  teamSelect.innerHTML = "<option value=''>Seleziona squadra</option>";
+  state.squadre.forEach((team) => {
+    const option = document.createElement("option");
+    option.value = team;
+    option.textContent = team;
+    teamSelect.append(option);
+  });
+}
+
 async function loadData() {
   setStatus("Caricamento dati...");
   try {
-    const [gareCsv, giocatoriCsv, staffCsv] = await Promise.all(
+    const [squadreCsv, gareCsv, giocatoriCsv, staffCsv] = await Promise.all(
       Object.values(SOURCES).map((url) => fetch(toCsvUrl(url)).then((response) => response.text()))
     );
 
+    state.squadre = normalizeTeams(parseCsv(squadreCsv));
     state.gare = normalizeMatches(parseCsv(gareCsv));
     state.giocatori = normalizePeople(parseCsv(giocatoriCsv), "players");
     state.staff = normalizePeople(parseCsv(staffCsv), "staff");
 
-    matchSelect.innerHTML = "";
-    state.gare.forEach((match, index) => {
-      const option = document.createElement("option");
-      option.value = index;
-      option.textContent = matchLabel(match);
-      matchSelect.append(option);
-    });
-
-    state.selectedMatch = state.gare[0] || null;
-    refreshSelections();
-    setStatus(`Dati caricati: ${state.gare.length} gare.`);
+    renderTeams();
+    refreshMatchesForTeam();
+    setStatus(`Dati caricati: ${state.squadre.length} squadre disponibili.`);
   } catch (error) {
     console.error(error);
     setStatus("Errore nel caricamento dei fogli Google. Controlla che i link siano pubblici.", true);
   }
 }
 
+teamSelect.addEventListener("change", (event) => {
+  state.selectedTeam = event.target.value;
+  refreshMatchesForTeam();
+});
+
 matchSelect.addEventListener("change", (event) => {
-  state.selectedMatch = state.gare[Number(event.target.value)] || null;
+  const filteredMatches = filterByTeam(state.gare, state.selectedTeam);
+  state.selectedMatch = filteredMatches[Number(event.target.value)] || null;
   refreshSelections();
 });
 
