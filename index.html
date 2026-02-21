@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convocazioni Gare</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Convocazioni</h1>
+        <p>Seleziona una gara, scegli i convocati e condividi il messaggio.</p>
+      </header>
+
+      <section class="card">
+        <label for="match-select">Gara</label>
+        <select id="match-select"></select>
+        <p id="match-info" class="hint"></p>
+      </section>
+
+      <section class="card grid-actions">
+        <button id="select-all-players" type="button">Tutti i giocatori</button>
+        <button id="clear-all-players" type="button" class="secondary">Nessuno</button>
+      </section>
+
+      <section class="card">
+        <h2>Giocatori</h2>
+        <div id="players-list" class="checkbox-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Allenatori e dirigenti</h2>
+        <div id="staff-list" class="checkbox-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>Messaggio</h2>
+        <textarea id="message" rows="8" placeholder="Premi 'Genera messaggio'"></textarea>
+        <div class="grid-actions">
+          <button id="generate-message" type="button">Genera messaggio</button>
+          <button id="copy-message" type="button" class="secondary">Copia</button>
+          <button id="share-message" type="button" class="secondary">Condividi</button>
+        </div>
+      </section>
+
+      <p id="status" class="status"></p>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
