@@ -275,12 +275,31 @@ function normalizePeople(rows, type) {
 
 function normalizeTeams(rows) {
   const unique = new Set();
+
   rows.forEach((row) => {
-    const teamCol = pickColumn(row, ["squadra", "categoria", "team"]);
-    const teamName = (row[teamCol] || "").trim();
-    if (teamName) unique.add(teamName);
+    const teamCol = pickColumn(row, ["squadra", "squadre", "categoria", "team"]);
+
+    if (teamCol && (row[teamCol] || "").trim()) {
+      unique.add(row[teamCol].trim());
+      return;
+    }
+
+    Object.values(row).forEach((value) => {
+      const normalized = (value || "").trim();
+      if (normalized) unique.add(normalized);
+    });
   });
+
   return [...unique];
+}
+
+function normalizeTeamsFromRawCsv(csvText) {
+  return [...new Set(
+    csvText
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^"|"$/g, "").trim())
+      .filter(Boolean)
+  )];
 }
 
 function renderTeams() {
@@ -301,6 +320,9 @@ async function loadData() {
     );
 
     state.squadre = normalizeTeams(parseCsv(squadreCsv));
+    if (!state.squadre.length) {
+      state.squadre = normalizeTeamsFromRawCsv(squadreCsv);
+    }
     state.gare = normalizeMatches(parseCsv(gareCsv));
     state.giocatori = normalizePeople(parseCsv(giocatoriCsv), "players");
     state.staff = normalizePeople(parseCsv(staffCsv), "staff");
