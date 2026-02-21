@@ -1,6 +1,4 @@
 const SOURCES = {
-  squadre:
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pub?gid=698820797&single=true&output=csv",
   gare:
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pubhtml?gid=813287810&single=true",
   giocatori:
@@ -273,33 +271,25 @@ function normalizePeople(rows, type) {
     .filter((row) => row.nome);
 }
 
-function normalizeTeams(rows) {
+function normalizeTeamsFromData(matches, players, staff) {
   const unique = new Set();
 
-  rows.forEach((row) => {
-    const teamCol = pickColumn(row, ["squadra", "squadre", "categoria", "team"]);
-
-    if (teamCol && (row[teamCol] || "").trim()) {
-      unique.add(row[teamCol].trim());
-      return;
-    }
-
-    Object.values(row).forEach((value) => {
-      const normalized = (value || "").trim();
-      if (normalized) unique.add(normalized);
-    });
+  matches.forEach((match) => {
+    const team = (match.squadra || "").trim();
+    if (team) unique.add(team);
   });
 
-  return [...unique];
-}
+  players.forEach((player) => {
+    const team = (player.squadra || "").trim();
+    if (team) unique.add(team);
+  });
 
-function normalizeTeamsFromRawCsv(csvText) {
-  return [...new Set(
-    csvText
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^"|"$/g, "").trim())
-      .filter(Boolean)
-  )];
+  staff.forEach((member) => {
+    const team = (member.squadra || "").trim();
+    if (team) unique.add(team);
+  });
+
+  return [...unique].sort((a, b) => a.localeCompare(b, "it"));
 }
 
 function renderTeams() {
@@ -315,17 +305,14 @@ function renderTeams() {
 async function loadData() {
   setStatus("Caricamento dati...");
   try {
-    const [squadreCsv, gareCsv, giocatoriCsv, staffCsv] = await Promise.all(
+    const [gareCsv, giocatoriCsv, staffCsv] = await Promise.all(
       Object.values(SOURCES).map((url) => fetch(toCsvUrl(url)).then((response) => response.text()))
     );
 
-    state.squadre = normalizeTeams(parseCsv(squadreCsv));
-    if (!state.squadre.length) {
-      state.squadre = normalizeTeamsFromRawCsv(squadreCsv);
-    }
     state.gare = normalizeMatches(parseCsv(gareCsv));
     state.giocatori = normalizePeople(parseCsv(giocatoriCsv), "players");
     state.staff = normalizePeople(parseCsv(staffCsv), "staff");
+    state.squadre = normalizeTeamsFromData(state.gare, state.giocatori, state.staff);
 
     renderTeams();
     refreshMatchesForTeam();
