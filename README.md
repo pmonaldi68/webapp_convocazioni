@@ -41,6 +41,6 @@ Apri `http://localhost:8000`.
 - Esclusione automatica del campionato `SECONDA CATEGORIA` dalla selezione.
 - `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare (comprensiva di indirizzo).
 
-- Foglio `CALCIATORI` letto via endpoint CSV del foglio per nome (`sheet=CALCIATORI`).
+- Foglio `CALCIATORI` letto con priorità dal CSV pubblicato dedicato dei giocatori (`gid=813287810`), con fallback al foglio per nome (`sheet=CALCIATORI`).
 
-- Caricamento `CALCIATORI` con fallback automatico su una seconda fonte CSV se il foglio per nome non risponde.
+- Filtro giocatori basato solo sulla `CATEGORIA` della gara per evitare accoppiamenti errati.

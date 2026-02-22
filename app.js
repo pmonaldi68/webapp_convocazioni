@@ -20,8 +20,8 @@ const SOURCES = {
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
   dirigenti: `${BASE_PUB_URL}?gid=0&single=true&output=csv`,
   calciatori: [
-    `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`,
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Ydr4imn_k8Hb1lhSIpBOLJ7UEaBk9wR9W03z9eiXosaDoJH_jmvUigsu5ltbUafRoW5ZKfG3Z-lG/pub?gid=813287810&single=true&output=csv"
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Ydr4imn_k8Hb1lhSIpBOLJ7UEaBk9wR9W03z9eiXosaDoJH_jmvUigsu5ltbUafRoW5ZKfG3Z-lG/pub?gid=813287810&single=true&output=csv",
+    `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`
   ]
 };
 
@@ -241,7 +241,7 @@ function renderCalciatoriByCategoria(categoria) {
   playersList.innerHTML = "";
 
   const players = state.calciatori
-    .filter((p) => sameCategory(p.categoria, categoria) || sameCategory(p.categoria, state.campionato))
+    .filter((p) => sameCategory(p.categoria, categoria))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 
   if (!players.length) {
