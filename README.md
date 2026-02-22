@@ -1,6 +1,6 @@
 # webapp_convocazioni
 
-Web app minimale per gestire le convocazioni settimanali da smartphone.
+Web app minimale per convocazioni, ottimizzata per smartphone.
 
 ## Avvio locale
 
@@ -10,10 +10,22 @@ python3 -m http.server 8000
 
 Apri `http://localhost:8000`.
 
-## Funzionalità
+## Flusso
 
-- Caricamento automatico da Google Sheets pubblici: gare, giocatori, allenatori e dirigenti (le squadre vengono ricavate automaticamente dai dati caricati).
-- Flusso guidato: prima selezione squadra, poi selezione gara.
-- Filtro automatico per mostrare solo giocatori/staff della squadra scelta.
-- Selezione rapida dei convocati.
-- Generazione messaggio pronto per copia/condivisione (WhatsApp o share nativa mobile).
+1. Seleziona la società (`ALBACYNTHIA` o `ACADEMY CYNTHIA GENZANO`).
+2. Seleziona il campionato disponibile per la società.
+3. L'app compila automaticamente i campi della prossima gara (in base alla data odierna):
+   - DATA
+   - ORA
+   - CAMPIONATO
+   - GIRONE
+   - GARA
+   - SQUADRA CASA
+   - SQUADRA OSPITE
+   - CAMPO ESTESO
+   - LNK MAPS
+
+## Dati
+
+- Fonte unica Google Sheet pubblicato (`pub?output=csv`) per le gare.
+- Foglio secondario (stesso documento) usato per la mappatura `categoria -> società`.

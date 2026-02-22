@@ -3,49 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Convocazioni Gare</title>
+    <title>Convocazioni - Prossima gara</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app">
       <header>
         <h1>Convocazioni</h1>
-        <p>Seleziona la squadra, poi la gara, scegli i convocati e condividi il messaggio.</p>
+        <p>Seleziona società e campionato: i dati della prossima gara si compilano in automatico.</p>
       </header>
 
       <section class="card">
-        <label for="team-select">Squadra</label>
-        <select id="team-select"></select>
+        <label for="societa-select">Società</label>
+        <select id="societa-select">
+          <option value="">Seleziona società</option>
+          <option value="ALBACYNTHIA">ALBACYNTHIA</option>
+          <option value="ACADEMY CYNTHIA GENZANO">ACADEMY CYNTHIA GENZANO</option>
+        </select>
+
+        <label for="campionato-select">Campionato</label>
+        <select id="campionato-select">
+          <option value="">Seleziona prima la società</option>
+        </select>
       </section>
 
       <section class="card">
-        <label for="match-select">Gara</label>
-        <select id="match-select"></select>
-        <p id="match-info" class="hint"></p>
-      </section>
-
-      <section class="card grid-actions">
-        <button id="select-all-players" type="button">Tutti i giocatori</button>
-        <button id="clear-all-players" type="button" class="secondary">Nessuno</button>
-      </section>
-
-      <section class="card">
-        <h2>Giocatori</h2>
-        <div id="players-list" class="checkbox-list"></div>
-      </section>
-
-      <section class="card">
-        <h2>Allenatori e dirigenti</h2>
-        <div id="staff-list" class="checkbox-list"></div>
-      </section>
-
-      <section class="card">
-        <h2>Messaggio</h2>
-        <textarea id="message" rows="8" placeholder="Premi 'Genera messaggio'"></textarea>
-        <div class="grid-actions">
-          <button id="generate-message" type="button">Genera messaggio</button>
-          <button id="copy-message" type="button" class="secondary">Copia</button>
-          <button id="share-message" type="button" class="secondary">Condividi</button>
+        <h2>Prossima gara</h2>
+        <div class="details-grid">
+          <label>DATA<input id="f-data" readonly /></label>
+          <label>ORA<input id="f-ora" readonly /></label>
+          <label>CAMPIONATO<input id="f-campionato" readonly /></label>
+          <label>GIRONE<input id="f-girone" readonly /></label>
+          <label>GARA<input id="f-gara" readonly /></label>
+          <label>SQUADRA CASA<input id="f-casa" readonly /></label>
+          <label>SQUADRA OSPITE<input id="f-ospite" readonly /></label>
+          <label>CAMPO ESTESO<input id="f-campo" readonly /></label>
+          <label>LNK MAPS<input id="f-maps" readonly /></label>
         </div>
       </section>
 
