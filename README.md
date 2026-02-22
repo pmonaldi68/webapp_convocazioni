@@ -42,3 +42,5 @@ Apri `http://localhost:8000`.
 - `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare (comprensiva di indirizzo).
 
 - Foglio `CALCIATORI` letto via endpoint CSV del foglio per nome (`sheet=CALCIATORI`).
+
+- Caricamento `CALCIATORI` con fallback automatico su una seconda fonte CSV se il foglio per nome non risponde.

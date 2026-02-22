@@ -19,7 +19,10 @@ const SOURCES = {
   gare: `${BASE_PUB_URL}?output=csv`,
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
   dirigenti: `${BASE_PUB_URL}?gid=0&single=true&output=csv`,
-  calciatori: `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`
+  calciatori: [
+    `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`,
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Ydr4imn_k8Hb1lhSIpBOLJ7UEaBk9wR9W03z9eiXosaDoJH_jmvUigsu5ltbUafRoW5ZKfG3Z-lG/pub?gid=813287810&single=true&output=csv"
+  ]
 };
 
 const state = {
@@ -46,6 +49,38 @@ const fields = {
   campo: document.getElementById("f-campo"),
   maps: document.getElementById("f-maps")
 };
+
+async function fetchFirstAvailableText(sources) {
+  const urls = Array.isArray(sources) ? sources : [sources];
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      const text = await response.text();
+      if (text && text.trim()) return text;
+    } catch (_) {
+      // provo il prossimo endpoint
+    }
+  }
+
+  throw new Error("Nessuna fonte dati disponibile");
+}
+
+function normalizeCategory(value) {
+  return (value || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function sameCategory(a, b) {
+  const x = normalizeCategory(a);
+  const y = normalizeCategory(b);
+  if (!x || !y) return false;
+  return x === y || x.includes(y) || y.includes(x);
+}
 
 function setStatus(message, isError = false) {
   statusNode.textContent = message;
@@ -199,15 +234,14 @@ function normalizeCalciatori(rows) {
       nome: extract(row, ["nome", "giocatore", "calciatore", "cognome"]),
       categoria: extract(row, ["categoria"])
     }))
-    .filter((row) => row.nome && row.categoria);
+    .filter((row) => row.nome);
 }
 
 function renderCalciatoriByCategoria(categoria) {
   playersList.innerHTML = "";
-  const categoriaNorm = (categoria || "").replace(/\s+/g, "").toUpperCase();
 
   const players = state.calciatori
-    .filter((p) => (p.categoria || "").replace(/\s+/g, "").toUpperCase() === categoriaNorm)
+    .filter((p) => sameCategory(p.categoria, categoria) || sameCategory(p.categoria, state.campionato))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 
   if (!players.length) {
@@ -311,7 +345,7 @@ async function loadData() {
     const [gareCsv, squadreCsv, calciatoriCsv] = await Promise.all([
       fetch(SOURCES.gare).then((r) => r.text()),
       fetch(SOURCES.squadre).then((r) => r.text()),
-      fetch(SOURCES.calciatori).then((r) => r.text())
+      fetchFirstAvailableText(SOURCES.calciatori)
     ]);
 
     state.gare = normalizeGare(parseCsv(gareCsv));
