@@ -12,6 +12,8 @@ const CATEGORIA_SOCIETA_OVERRIDES = {
   UNDER14F: SOCIETA.ACADEMY
 };
 
+const EXCLUDED_CHAMPIONSHIPS = new Set(["SECONDA CATEGORIA"]);
+
 const SOURCES = {
   gare: `${BASE_PUB_URL}?output=csv`,
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
@@ -84,7 +86,7 @@ function parseCsv(text) {
 
   const [headers = [], ...records] = rows;
   return records.map((record) => {
-    const obj = {};
+    const obj = { __values: record };
     headers.forEach((header, index) => {
       obj[(header || `col_${index}`).trim()] = record[index] || "";
     });
@@ -99,6 +101,17 @@ function findColumn(row, keys) {
 function extract(row, keys) {
   const col = findColumn(row, keys);
   return col ? (row[col] || "").replace(/\s+/g, " ").trim() : "";
+}
+
+function isExcludedCampionato(campionato) {
+  const normalized = (campionato || "").replace(/\s+/g, " ").trim().toUpperCase();
+  return EXCLUDED_CHAMPIONSHIPS.has(normalized);
+}
+
+function extractCampoEsteso(row) {
+  const fromHeader = extract(row, ["campo esteso", "campo", "indirizzo"]);
+  const fromColumnJ = ((row.__values || [])[9] || "").replace(/\s+/g, " ").trim();
+  return fromColumnJ || fromHeader;
 }
 
 function parseItalianDate(dateStr) {
@@ -124,12 +137,13 @@ function normalizeGare(rows) {
       gara: extract(row, ["gara", "incontro"]),
       squadraCasa: extract(row, ["squadra casa", "casa"]),
       squadraOspite: extract(row, ["squadra ospite", "ospite"]),
-      campoEsteso: extract(row, ["campo esteso", "campo"]),
+      campoEsteso: extractCampoEsteso(row),
       lnkMaps: extract(row, ["lnk maps", "maps", "google"]),
       categoria: extract(row, ["categoria"]),
       societa: extract(row, ["societ", "societa"])
     }))
-    .filter((row) => row.data || row.campionato || row.categoria);
+    .filter((row) => row.data || row.campionato || row.categoria)
+    .filter((row) => !isExcludedCampionato(row.campionato));
 }
 
 function buildCategoriaSocietaMap(rows) {
@@ -184,7 +198,9 @@ function clearFields() {
 function campionatiPerSocieta(societa) {
   const unique = new Set();
   state.gare.forEach((match) => {
-    if (resolveSocietaForMatch(match) === societa && match.campionato) unique.add(match.campionato);
+    if (resolveSocietaForMatch(match) === societa && match.campionato && !isExcludedCampionato(match.campionato)) {
+      unique.add(match.campionato);
+    }
   });
   return [...unique].sort((a, b) => a.localeCompare(b, "it"));
 }
@@ -218,6 +234,7 @@ function prossimaGara() {
 
   return state.gare
     .filter((match) => resolveSocietaForMatch(match) === state.societa)
+        .filter((match) => !isExcludedCampionato(match.campionato))
     .filter((match) => !state.campionato || match.campionato === state.campionato)
     .map((match) => ({ match, dateObj: parseItalianDate(match.data) }))
     .filter((x) => x.dateObj && x.dateObj >= today)

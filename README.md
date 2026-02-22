@@ -36,3 +36,6 @@ Apri `http://localhost:8000`.
 - Mappatura forzata gestita in app:
   - `UNDER14I` -> `ALBACYNTHIA`
   - `UNDER14F` -> `ACADEMY CYNTHIA GENZANO`
+
+- Esclusione automatica del campionato `SECONDA CATEGORIA` dalla selezione.
+- `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare (comprensiva di indirizzo).
