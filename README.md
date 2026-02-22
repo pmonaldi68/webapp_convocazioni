@@ -14,33 +14,20 @@ Apri `http://localhost:8000`.
 
 1. Seleziona la società (`ALBACYNTHIA` o `ACADEMY CYNTHIA GENZANO`).
 2. Seleziona il campionato disponibile per la società.
-3. L'app compila automaticamente i campi della prossima gara (in base alla data odierna):
-   - DATA
-   - ORA
-   - CAMPIONATO
-   - GIRONE
-   - GARA
-   - SQUADRA CASA
-   - SQUADRA OSPITE
-   - CAMPO ESTESO
-   - LNK MAPS
-4. Sotto la gara vengono mostrati i calciatori del foglio `CALCIATORI` filtrati per la stessa `CATEGORIA` della gara trovata.
+3. L'app compila automaticamente i dati della prossima gara.
+4. Seleziona i convocati (max 20) dalla lista giocatori con pulsanti rapidi:
+   - `Seleziona primi 20`
+   - `Azzera selezione`
 
-## Dati
+## Regole convocazioni per categoria
 
-- Fonte unica Google Sheet pubblicato (`pub?output=csv`) per le gare.
-- Foglio secondario (stesso documento) usato per la mappatura `categoria -> società`.
+- `UNDER14I` e `UNDER14F`: **nessun prestito** da altre squadre.
+- `UNDER15F`: può convocare anche da `UNDER14F`.
+- `UNDER16D`: può convocare anche da `UNDER15F`.
+- `UNDER17E`: può convocare anche da `UNDER16D`.
 
+## Note dati
 
-## Nota categorie U14
-
-- Mappatura forzata gestita in app:
-  - `UNDER14I` -> `ALBACYNTHIA`
-  - `UNDER14F` -> `ACADEMY CYNTHIA GENZANO`
-
-- Esclusione automatica del campionato `SECONDA CATEGORIA` dalla selezione.
-- `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare (comprensiva di indirizzo).
-
-- Foglio `CALCIATORI` letto con priorità dal CSV pubblicato dedicato dei giocatori (`gid=813287810`), con fallback al foglio per nome (`sheet=CALCIATORI`).
-
-- Filtro giocatori basato solo sulla `CATEGORIA` della gara per evitare accoppiamenti errati.
+- Esclusione automatica del campionato `SECONDA CATEGORIA`.
+- `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare.
+- Calciatori letti con priorità dal CSV dedicato (`gid=813287810`) con fallback su `sheet=CALCIATORI`.

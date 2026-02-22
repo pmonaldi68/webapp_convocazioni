@@ -13,12 +13,20 @@ const CATEGORIA_SOCIETA_OVERRIDES = {
   UNDER14F: SOCIETA.ACADEMY
 };
 
+const EXTRA_CATEGORY_RULES = {
+  UNDER14I: [],
+  UNDER14F: [],
+  UNDER15F: ["UNDER14F"],
+  UNDER16D: ["UNDER15F"],
+  UNDER17E: ["UNDER16D"]
+};
+
 const EXCLUDED_CHAMPIONSHIPS = new Set(["SECONDA CATEGORIA"]);
+const MAX_CONVOCATI = 20;
 
 const SOURCES = {
   gare: `${BASE_PUB_URL}?output=csv`,
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
-  dirigenti: `${BASE_PUB_URL}?gid=0&single=true&output=csv`,
   calciatori: [
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Ydr4imn_k8Hb1lhSIpBOLJ7UEaBk9wR9W03z9eiXosaDoJH_jmvUigsu5ltbUafRoW5ZKfG3Z-lG/pub?gid=813287810&single=true&output=csv",
     `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`
@@ -30,13 +38,16 @@ const state = {
   calciatori: [],
   mappaCategoriaSocieta: new Map(),
   societa: "",
-  campionato: ""
+  campionato: "",
+  currentMatch: null,
+  selectedPlayers: new Set()
 };
 
 const societaSelect = document.getElementById("societa-select");
 const campionatoSelect = document.getElementById("campionato-select");
 const statusNode = document.getElementById("status");
 const playersList = document.getElementById("players-list");
+const playerCounter = document.getElementById("players-counter");
 
 const fields = {
   data: document.getElementById("f-data"),
@@ -51,19 +62,14 @@ const fields = {
 };
 
 async function fetchFirstAvailableText(sources) {
-  const urls = Array.isArray(sources) ? sources : [sources];
-
-  for (const url of urls) {
+  for (const url of (Array.isArray(sources) ? sources : [sources])) {
     try {
       const response = await fetch(url);
       if (!response.ok) continue;
       const text = await response.text();
-      if (text && text.trim()) return text;
-    } catch (_) {
-      // provo il prossimo endpoint
-    }
+      if (text?.trim()) return text;
+    } catch (_) {}
   }
-
   throw new Error("Nessuna fonte dati disponibile");
 }
 
@@ -71,15 +77,8 @@ function normalizeCategory(value) {
   return (value || "")
     .toUpperCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Z0-9]/g, "");
-}
-
-function sameCategory(a, b) {
-  const x = normalizeCategory(a);
-  const y = normalizeCategory(b);
-  if (!x || !y) return false;
-  return x === y || x.includes(y) || y.includes(x);
 }
 
 function setStatus(message, isError = false) {
@@ -143,8 +142,7 @@ function extract(row, keys) {
 }
 
 function isExcludedCampionato(campionato) {
-  const normalized = (campionato || "").replace(/\s+/g, " ").trim().toUpperCase();
-  return EXCLUDED_CHAMPIONSHIPS.has(normalized);
+  return EXCLUDED_CHAMPIONSHIPS.has((campionato || "").replace(/\s+/g, " ").trim().toUpperCase());
 }
 
 function extractCampoEsteso(row) {
@@ -154,14 +152,9 @@ function extractCampoEsteso(row) {
 }
 
 function parseItalianDate(dateStr) {
-  const raw = (dateStr || "").trim();
-  if (!raw) return null;
-  const m = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+  const m = (dateStr || "").trim().match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
   if (!m) return null;
-  const day = Number(m[1]);
-  const month = Number(m[2]) - 1;
-  const year = Number(m[3].length === 2 ? `20${m[3]}` : m[3]);
-  const d = new Date(year, month, day);
+  const d = new Date(Number(m[3].length === 2 ? `20${m[3]}` : m[3]), Number(m[2]) - 1, Number(m[1]));
   d.setHours(0, 0, 0, 0);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -181,18 +174,7 @@ function normalizeGare(rows) {
       categoria: extract(row, ["categoria"]),
       societa: extract(row, ["societ", "societa"])
     }))
-    .filter((row) => row.data || row.campionato || row.categoria)
-    .filter((row) => !isExcludedCampionato(row.campionato));
-}
-
-function buildCategoriaSocietaMap(rows) {
-  const map = new Map();
-  rows.forEach((row) => {
-    const categoria = extract(row, ["categoria"]);
-    const societa = extract(row, ["societ", "societa"]);
-    if (categoria && societa) map.set(categoria.toLowerCase(), normalizeSocietaName(societa) || societa);
-  });
-  return map;
+    .filter((row) => (row.data || row.campionato || row.categoria) && !isExcludedCampionato(row.campionato));
 }
 
 function normalizeSocietaName(value) {
@@ -202,59 +184,107 @@ function normalizeSocietaName(value) {
   return "";
 }
 
-function inferSocietaFromCategoria(categoria) {
-  const cat = (categoria || "").toUpperCase().replace(/\s+/g, "").trim();
-  if (!cat) return "";
-  if (cat.endsWith("I")) return SOCIETA.ALBA;
-  if (cat.endsWith("F")) return SOCIETA.ACADEMY;
-  return "";
+function buildCategoriaSocietaMap(rows) {
+  const map = new Map();
+  rows.forEach((row) => {
+    const categoria = normalizeCategory(extract(row, ["categoria"]));
+    const societa = normalizeSocietaName(extract(row, ["societ", "societa"]));
+    if (categoria && societa) map.set(categoria, societa);
+  });
+  return map;
 }
 
 function resolveSocietaForMatch(match) {
-  const categoriaNorm = (match.categoria || "").toUpperCase().replace(/\s+/g, "").trim();
-
-  if (categoriaNorm && CATEGORIA_SOCIETA_OVERRIDES[categoriaNorm]) {
-    return CATEGORIA_SOCIETA_OVERRIDES[categoriaNorm];
-  }
-
-  const fromMatch = normalizeSocietaName(match.societa);
-  if (fromMatch) return fromMatch;
-
-  if (match.categoria) {
-    const fromMap = normalizeSocietaName(state.mappaCategoriaSocieta.get(match.categoria.toLowerCase()) || "");
-    if (fromMap) return fromMap;
-  }
-
-  return inferSocietaFromCategoria(match.categoria);
+  const cat = normalizeCategory(match.categoria);
+  if (CATEGORIA_SOCIETA_OVERRIDES[cat]) return CATEGORIA_SOCIETA_OVERRIDES[cat];
+  return normalizeSocietaName(match.societa) || state.mappaCategoriaSocieta.get(cat) || "";
 }
 
 function normalizeCalciatori(rows) {
   return rows
     .map((row) => ({
       nome: extract(row, ["nome", "giocatore", "calciatore", "cognome"]),
-      categoria: extract(row, ["categoria"])
+      categoria: normalizeCategory(extract(row, ["categoria"]))
     }))
-    .filter((row) => row.nome);
+    .filter((row) => row.nome && row.categoria);
+}
+
+function getEligibleCategories(baseCategory) {
+  const base = normalizeCategory(baseCategory);
+  const extra = EXTRA_CATEGORY_RULES[base] || [];
+  return [base, ...extra];
+}
+
+function getEligiblePlayers(baseCategory) {
+  const allowed = new Set(getEligibleCategories(baseCategory));
+  return state.calciatori
+    .filter((p) => allowed.has(p.categoria))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+}
+
+function updateCounter() {
+  playerCounter.textContent = `${state.selectedPlayers.size}/${MAX_CONVOCATI}`;
 }
 
 function renderCalciatoriByCategoria(categoria) {
   playersList.innerHTML = "";
+  state.selectedPlayers.clear();
+  updateCounter();
 
-  const players = state.calciatori
-    .filter((p) => sameCategory(p.categoria, categoria))
-    .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
-
+  const players = getEligiblePlayers(categoria);
   if (!players.length) {
-    playersList.innerHTML = "<p class=\"hint\">Nessun giocatore trovato per questa categoria.</p>";
+    playersList.innerHTML = `<p class="hint">Nessun giocatore disponibile per ${categoria || "categoria n/d"}.</p>`;
     return;
   }
 
   players.forEach((player) => {
-    const item = document.createElement("div");
+    const item = document.createElement("label");
     item.className = "player-item";
-    item.textContent = player.nome;
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = player.nome;
+
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = player.categoria;
+
+    const name = document.createElement("span");
+    name.textContent = player.nome;
+
+    input.addEventListener("change", () => {
+      if (input.checked && state.selectedPlayers.size >= MAX_CONVOCATI) {
+        input.checked = false;
+        setStatus(`Puoi convocare al massimo ${MAX_CONVOCATI} giocatori.`, true);
+        return;
+      }
+
+      if (input.checked) state.selectedPlayers.add(player.nome);
+      else state.selectedPlayers.delete(player.nome);
+      updateCounter();
+    });
+
+    item.append(input, name, badge);
     playersList.append(item);
   });
+}
+
+function clearSelectedPlayers() {
+  [...playersList.querySelectorAll('input[type="checkbox"]')].forEach((cb) => {
+    cb.checked = false;
+  });
+  state.selectedPlayers.clear();
+  updateCounter();
+}
+
+function quickSelect(limit) {
+  const checkboxes = [...playersList.querySelectorAll('input[type="checkbox"]')];
+  state.selectedPlayers.clear();
+  checkboxes.forEach((cb, idx) => {
+    cb.checked = idx < limit;
+    if (cb.checked) state.selectedPlayers.add(cb.value);
+  });
+  updateCounter();
 }
 
 function clearFields() {
@@ -262,32 +292,27 @@ function clearFields() {
     f.value = "";
   });
   playersList.innerHTML = "<p class=\"hint\">Seleziona campionato per vedere i giocatori.</p>";
+  state.selectedPlayers.clear();
+  updateCounter();
 }
 
 function campionatiPerSocieta(societa) {
-  const unique = new Set();
-  state.gare.forEach((match) => {
-    if (resolveSocietaForMatch(match) === societa && match.campionato && !isExcludedCampionato(match.campionato)) {
-      unique.add(match.campionato);
-    }
-  });
-  return [...unique].sort((a, b) => a.localeCompare(b, "it"));
+  return [...new Set(state.gare
+    .filter((match) => resolveSocietaForMatch(match) === societa && match.campionato)
+    .map((match) => match.campionato))].sort((a, b) => a.localeCompare(b, "it"));
 }
 
 function renderCampionati() {
   const campionati = state.societa ? campionatiPerSocieta(state.societa) : [];
   campionatoSelect.innerHTML = "";
-
   if (!state.societa) {
     campionatoSelect.innerHTML = "<option value=''>Seleziona prima la società</option>";
     return;
   }
-
   if (!campionati.length) {
     campionatoSelect.innerHTML = "<option value=''>Nessun campionato disponibile</option>";
     return;
   }
-
   campionatoSelect.innerHTML = "<option value=''>Seleziona campionato</option>";
   campionati.forEach((campionato) => {
     const option = document.createElement("option");
@@ -300,27 +325,24 @@ function renderCampionati() {
 function prossimaGara() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   return state.gare
     .filter((match) => resolveSocietaForMatch(match) === state.societa)
-        .filter((match) => !isExcludedCampionato(match.campionato))
     .filter((match) => !state.campionato || match.campionato === state.campionato)
     .map((match) => ({ match, dateObj: parseItalianDate(match.data) }))
     .filter((x) => x.dateObj && x.dateObj >= today)
-    .sort((a, b) => a.dateObj - b.dateObj)[0]?.match;
+    .sort((a, b) => a.dateObj - b.dateObj)[0]?.match || null;
 }
 
 function renderProssimaGara() {
   clearFields();
-
   if (!state.societa || !state.campionato) {
     setStatus("Seleziona società e campionato.");
     return;
   }
 
   const match = prossimaGara();
+  state.currentMatch = match;
   if (!match) {
-    renderCalciatoriByCategoria("");
     setStatus("Nessuna prossima gara trovata per i filtri selezionati.", true);
     return;
   }
@@ -335,8 +357,7 @@ function renderProssimaGara() {
   fields.campo.value = match.campoEsteso;
   fields.maps.value = match.lnkMaps;
   renderCalciatoriByCategoria(match.categoria);
-
-  setStatus(`Prossima gara caricata automaticamente (${match.categoria || "categoria n/d"}).`);
+  setStatus(`Prossima gara caricata (${match.categoria}).`);
 }
 
 async function loadData() {
@@ -357,7 +378,7 @@ async function loadData() {
     setStatus(`Dati caricati: ${state.gare.length} gare, ${state.calciatori.length} calciatori.`);
   } catch (error) {
     console.error(error);
-    setStatus("Errore nel caricamento del foglio Google. Verifica pubblicazione e permessi.", true);
+    setStatus("Errore nel caricamento dati.", true);
   }
 }
 
@@ -373,4 +394,8 @@ campionatoSelect.addEventListener("change", (event) => {
   renderProssimaGara();
 });
 
+document.getElementById("select-20").addEventListener("click", () => quickSelect(MAX_CONVOCATI));
+document.getElementById("clear-selected").addEventListener("click", clearSelectedPlayers);
+
+updateCounter();
 loadData();

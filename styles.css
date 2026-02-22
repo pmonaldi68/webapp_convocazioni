@@ -144,9 +144,38 @@ button.secondary {
   margin-top: 8px;
 }
 
+
+.players-toolbar {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.players-toolbar strong {
+  font-size: 0.95rem;
+}
+
 .player-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
   background: #f8fafc;
+}
+
+.player-item input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+.badge {
+  background: #e0e7ff;
+  color: #1e3a8a;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
