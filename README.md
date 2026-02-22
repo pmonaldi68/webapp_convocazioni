@@ -29,3 +29,10 @@ Apri `http://localhost:8000`.
 
 - Fonte unica Google Sheet pubblicato (`pub?output=csv`) per le gare.
 - Foglio secondario (stesso documento) usato per la mappatura `categoria -> società`.
+
+
+## Nota categorie U14
+
+- Mappatura forzata gestita in app:
+  - `UNDER14I` -> `ALBACYNTHIA`
+  - `UNDER14F` -> `ACADEMY CYNTHIA GENZANO`

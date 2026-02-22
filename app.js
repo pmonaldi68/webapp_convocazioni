@@ -1,6 +1,12 @@
 const BASE_PUB_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pub";
 
+
+const CATEGORIA_SOCIETA_OVERRIDES = {
+  UNDER14I: "ALBACYNTHIA",
+  UNDER14F: "ACADEMY CYNTHIA GENZANO"
+};
+
 const SOURCES = {
   gare: `${BASE_PUB_URL}?output=csv`,
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
@@ -87,7 +93,7 @@ function findColumn(row, keys) {
 
 function extract(row, keys) {
   const col = findColumn(row, keys);
-  return col ? (row[col] || "").trim() : "";
+  return col ? (row[col] || "").replace(/\s+/g, " ").trim() : "";
 }
 
 function parseItalianDate(dateStr) {
@@ -132,6 +138,12 @@ function buildCategoriaSocietaMap(rows) {
 }
 
 function resolveSocietaForMatch(match) {
+  const categoriaNorm = (match.categoria || "").toUpperCase().replace(/\s+/g, "").trim();
+
+  if (categoriaNorm && CATEGORIA_SOCIETA_OVERRIDES[categoriaNorm]) {
+    return CATEGORIA_SOCIETA_OVERRIDES[categoriaNorm];
+  }
+
   if (match.societa) return match.societa;
   if (!match.categoria) return "";
   return state.mappaCategoriaSocieta.get(match.categoria.toLowerCase()) || "";
