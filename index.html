@@ -63,6 +63,20 @@
         </div>
       </section>
 
+      <section class="card">
+        <h2>Messaggio convocazione</h2>
+        <label for="f-convocazione">Ora convocazione (modificabile)</label>
+        <input id="f-convocazione" type="time" />
+
+        <label for="message-output">Testo convocazione</label>
+        <textarea id="message-output" rows="12" readonly></textarea>
+
+        <div class="grid-actions">
+          <button id="copy-message" type="button">Copia messaggio</button>
+          <button id="share-whatsapp" type="button" class="secondary">Apri WhatsApp</button>
+        </div>
+      </section>
+
       <p id="status" class="status"></p>
     </main>
 

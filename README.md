@@ -23,6 +23,18 @@ Apri `http://localhost:8000`.
    - 🅲 Capitano
    - 🆅 Vice Capitano
    - 🚩 Guardalinee
+6. Nella sezione **Messaggio convocazione** trovi il testo pronto con i campi:
+   - DATA
+   - ORA
+   - ORA CONVOCAZIONE (calcolata automaticamente a `-1h15` rispetto all'ora gara, ma modificabile)
+   - CAMPIONATO
+   - GIRONE
+   - GARA
+   - SQUADRA CASA
+   - SQUADRA OSPITE
+   - CAMPO ESTESO
+   - LNK MAPS
+   - elenco convocati selezionati
 
 ## Regole convocazioni per categoria
 

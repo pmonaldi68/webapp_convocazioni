@@ -63,6 +63,16 @@ button {
   font-size: 1rem;
 }
 
+textarea {
+  resize: vertical;
+  min-height: 220px;
+}
+
+textarea[readonly],
+input[readonly] {
+  background: #f8fafc;
+}
+
 button {
   background: var(--primary);
   border: 0;
@@ -79,28 +89,11 @@ button.secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 8px;
 }
 
 .grid-actions button:first-child:last-child {
   grid-column: 1 / -1;
-}
-
-.checkbox-list {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
-  max-height: 220px;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.checkbox-item {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
 }
 
 .hint,
@@ -116,7 +109,6 @@ button.secondary {
   }
 }
 
-
 .details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -127,23 +119,17 @@ button.secondary {
   display: grid;
 }
 
-.details-grid input {
-  background: #f8fafc;
-}
-
 @media (max-width: 520px) {
   .details-grid {
     grid-template-columns: 1fr;
   }
 }
 
-
 .players-list {
   display: grid;
   gap: 6px;
   margin-top: 8px;
 }
-
 
 .players-toolbar {
   display: grid;
@@ -155,7 +141,6 @@ button.secondary {
   font-size: 0.95rem;
 }
 
-
 .badge {
   background: #e0e7ff;
   color: #1e3a8a;
@@ -163,7 +148,6 @@ button.secondary {
   padding: 2px 8px;
   font-size: 0.75rem;
 }
-
 
 .sub-title {
   margin: 10px 0 6px;

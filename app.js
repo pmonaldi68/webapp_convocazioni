@@ -50,6 +50,8 @@ const playersMainNode = document.getElementById("players-main");
 const playersLoansNode = document.getElementById("players-loans");
 const loansSectionNode = document.getElementById("loans-section");
 const playerCounter = document.getElementById("players-counter");
+const convocazioneTimeInput = document.getElementById("f-convocazione");
+const messageOutput = document.getElementById("message-output");
 
 const fields = {
   data: document.getElementById("f-data"),
@@ -228,6 +230,54 @@ function updateCounter() {
   playerCounter.textContent = `${state.selectedPlayers.size}/${MAX_CONVOCATI}`;
 }
 
+function formatTimeForInput(oraRaw) {
+  const match = (oraRaw || "").match(/(\d{1,2})[:.](\d{2})/);
+  if (!match) return "";
+  const hours = String(Math.min(23, Number(match[1]))).padStart(2, "0");
+  const mins = String(Math.min(59, Number(match[2]))).padStart(2, "0");
+  return `${hours}:${mins}`;
+}
+
+function minus75Minutes(timeValue) {
+  const m = (timeValue || "").match(/^(\d{2}):(\d{2})$/);
+  if (!m) return "";
+  const total = Number(m[1]) * 60 + Number(m[2]);
+  const adjusted = (total - 75 + 24 * 60) % (24 * 60);
+  const h = String(Math.floor(adjusted / 60)).padStart(2, "0");
+  const mm = String(adjusted % 60).padStart(2, "0");
+  return `${h}:${mm}`;
+}
+
+function getSelectedPlayers() {
+  return [...state.selectedPlayers].sort((a, b) => a.localeCompare(b, "it"));
+}
+
+function generateMessage() {
+  const selected = getSelectedPlayers();
+  const convTime = convocazioneTimeInput.value || "--:--";
+  const maps = fields.maps.value || "-";
+  const playersBlock = selected.length
+    ? selected.map((name, idx) => `${idx + 1}. ${name}`).join("\n")
+    : "Nessun giocatore selezionato";
+
+  messageOutput.value = [
+    "CONVOCAZIONE GARA",
+    `DATA: ${fields.data.value || "-"}`,
+    `ORA: ${fields.ora.value || "-"}`,
+    `ORA CONVOCAZIONE: ${convTime}`,
+    `CAMPIONATO: ${fields.campionato.value || "-"}`,
+    `GIRONE: ${fields.girone.value || "-"}`,
+    `GARA: ${fields.gara.value || "-"}`,
+    `SQUADRA CASA: ${fields.casa.value || "-"}`,
+    `SQUADRA OSPITE: ${fields.ospite.value || "-"}`,
+    `CAMPO ESTESO: ${fields.campo.value || "-"}`,
+    `LNK MAPS: ${maps}`,
+    "",
+    "CONVOCATI:",
+    playersBlock
+  ].join("\n");
+}
+
 function createRoleIcon(label, icon, name, playerName) {
   const wrapper = document.createElement("label");
   wrapper.className = "role-tag";
@@ -248,6 +298,7 @@ function renderPlayerRow(player, container) {
   select.type = "checkbox";
   select.value = player.nome;
   select.className = "convocato-checkbox";
+  select.checked = state.selectedPlayers.has(player.nome);
 
   const name = document.createElement("span");
   name.className = "player-name";
@@ -275,6 +326,7 @@ function renderPlayerRow(player, container) {
     if (select.checked) state.selectedPlayers.add(player.nome);
     else state.selectedPlayers.delete(player.nome);
     updateCounter();
+    generateMessage();
   });
 
   item.append(select, name, badge, roles);
@@ -287,7 +339,9 @@ function renderPlayers(baseCategory, includeLoans) {
 
   const players = getEligiblePlayers(baseCategory, includeLoans);
   const baseNorm = normalizeCategory(baseCategory);
-  const filtered = includeLoans ? players.filter((p) => p.categoria !== baseNorm) : players.filter((p) => p.categoria === baseNorm || p.categoria.includes(baseNorm) || baseNorm.includes(p.categoria));
+  const filtered = includeLoans
+    ? players.filter((p) => p.categoria !== baseNorm)
+    : players.filter((p) => p.categoria === baseNorm || p.categoria.includes(baseNorm) || baseNorm.includes(p.categoria));
 
   if (!filtered.length) {
     targetNode.innerHTML = `<p class="hint">Nessun giocatore ${includeLoans ? "in prestito" : "della categoria principale"}.</p>`;
@@ -298,28 +352,32 @@ function renderPlayers(baseCategory, includeLoans) {
 }
 
 function clearSelectedPlayers() {
-  [...document.querySelectorAll('.convocato-checkbox')].forEach((cb) => {
+  [...document.querySelectorAll(".convocato-checkbox")].forEach((cb) => {
     cb.checked = false;
   });
   state.selectedPlayers.clear();
   updateCounter();
+  generateMessage();
 }
 
 function quickSelect(limit) {
-  const checkboxes = [...document.querySelectorAll('.convocato-checkbox')];
+  const checkboxes = [...document.querySelectorAll(".convocato-checkbox")];
   state.selectedPlayers.clear();
   checkboxes.forEach((cb, idx) => {
     cb.checked = idx < limit;
     if (cb.checked) state.selectedPlayers.add(cb.value);
   });
   updateCounter();
+  generateMessage();
 }
 
 function clearFields() {
   Object.values(fields).forEach((f) => {
     f.value = "";
   });
-  playersMainNode.innerHTML = "<p class=\"hint\">Seleziona campionato per vedere i giocatori.</p>";
+  convocazioneTimeInput.value = "";
+  messageOutput.value = "";
+  playersMainNode.innerHTML = '<p class="hint">Seleziona campionato per vedere i giocatori.</p>';
   playersLoansNode.innerHTML = "";
   loansSectionNode.classList.add("hidden");
   state.selectedPlayers.clear();
@@ -327,9 +385,13 @@ function clearFields() {
 }
 
 function campionatiPerSocieta(societa) {
-  return [...new Set(state.gare
-    .filter((match) => resolveSocietaForMatch(match) === societa && match.campionato)
-    .map((match) => match.campionato))].sort((a, b) => a.localeCompare(b, "it"));
+  return [
+    ...new Set(
+      state.gare
+        .filter((match) => resolveSocietaForMatch(match) === societa && match.campionato)
+        .map((match) => match.campionato)
+    )
+  ].sort((a, b) => a.localeCompare(b, "it"));
 }
 
 function renderCampionati() {
@@ -355,12 +417,14 @@ function renderCampionati() {
 function prossimaGara() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return state.gare
-    .filter((match) => resolveSocietaForMatch(match) === state.societa)
-    .filter((match) => !state.campionato || match.campionato === state.campionato)
-    .map((match) => ({ match, dateObj: parseItalianDate(match.data) }))
-    .filter((x) => x.dateObj && x.dateObj >= today)
-    .sort((a, b) => a.dateObj - b.dateObj)[0]?.match || null;
+  return (
+    state.gare
+      .filter((match) => resolveSocietaForMatch(match) === state.societa)
+      .filter((match) => !state.campionato || match.campionato === state.campionato)
+      .map((match) => ({ match, dateObj: parseItalianDate(match.data) }))
+      .filter((x) => x.dateObj && x.dateObj >= today)
+      .sort((a, b) => a.dateObj - b.dateObj)[0]?.match || null
+  );
 }
 
 function renderProssimaGara() {
@@ -387,7 +451,11 @@ function renderProssimaGara() {
   fields.campo.value = match.campoEsteso;
   fields.maps.value = match.lnkMaps;
 
+  const oraPartita = formatTimeForInput(match.ora);
+  convocazioneTimeInput.value = minus75Minutes(oraPartita);
+
   renderPlayers(match.categoria, false);
+  generateMessage();
   setStatus(`Prossima gara caricata (${match.categoria}).`);
 }
 
@@ -425,6 +493,8 @@ campionatoSelect.addEventListener("change", (event) => {
   renderProssimaGara();
 });
 
+convocazioneTimeInput.addEventListener("input", generateMessage);
+
 document.getElementById("select-20").addEventListener("click", () => quickSelect(MAX_CONVOCATI));
 document.getElementById("clear-selected").addEventListener("click", clearSelectedPlayers);
 document.getElementById("load-loans").addEventListener("click", () => {
@@ -435,6 +505,33 @@ document.getElementById("load-loans").addEventListener("click", () => {
 
   loansSectionNode.classList.remove("hidden");
   renderPlayers(state.currentMatch.categoria, true);
+  generateMessage();
+});
+
+document.getElementById("copy-message").addEventListener("click", async () => {
+  if (!messageOutput.value.trim()) {
+    setStatus("Nessun messaggio da copiare.", true);
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(messageOutput.value);
+    setStatus("Messaggio copiato negli appunti.");
+  } catch (_) {
+    messageOutput.select();
+    document.execCommand("copy");
+    setStatus("Messaggio copiato negli appunti.");
+  }
+});
+
+document.getElementById("share-whatsapp").addEventListener("click", () => {
+  if (!messageOutput.value.trim()) {
+    setStatus("Nessun messaggio da inviare.", true);
+    return;
+  }
+
+  const encoded = encodeURIComponent(messageOutput.value);
+  window.open(`https://wa.me/?text=${encoded}`, "_blank");
 });
 
 updateCounter();
