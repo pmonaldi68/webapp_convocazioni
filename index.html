@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convocazioni - Prossima gara</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Convocazioni</h1>
+        <p>Seleziona società e campionato: poi scegli i convocati.</p>
+      </header>
+
+      <section class="card">
+        <label for="societa-select">Società</label>
+        <select id="societa-select">
+          <option value="">Seleziona società</option>
+          <option value="ALBACYNTHIA">ALBACYNTHIA</option>
+          <option value="ACADEMY CYNTHIA GENZANO">ACADEMY CYNTHIA GENZANO</option>
+        </select>
+
+        <label for="campionato-select">Campionato</label>
+        <select id="campionato-select">
+          <option value="">Seleziona prima la società</option>
+        </select>
+      </section>
+
+      <section class="card">
+        <h2>Prossima gara</h2>
+        <div class="details-grid">
+          <label>DATA<input id="f-data" readonly /></label>
+          <label>ORA<input id="f-ora" readonly /></label>
+          <label>CAMPIONATO<input id="f-campionato" readonly /></label>
+          <label>GIRONE<input id="f-girone" readonly /></label>
+          <label>GARA<input id="f-gara" readonly /></label>
+          <label>SQUADRA CASA<input id="f-casa" readonly /></label>
+          <label>SQUADRA OSPITE<input id="f-ospite" readonly /></label>
+          <label>CAMPO ESTESO<input id="f-campo" readonly /></label>
+          <label>LNK MAPS<input id="f-maps" readonly /></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Giocatori convocati</h2>
+        <div class="players-toolbar">
+          <strong>Convocati: <span id="players-counter">0/20</span></strong>
+          <button id="select-20" type="button">Seleziona primi 20</button>
+          <button id="clear-selected" type="button" class="secondary">Azzera selezione</button>
+        </div>
+
+        <h3 class="sub-title">Squadra principale</h3>
+        <div id="players-main" class="players-list">
+          <p class="hint">Seleziona campionato per vedere i giocatori.</p>
+        </div>
+
+        <button id="load-loans" type="button" class="secondary">Carica giocatori in prestito consentiti</button>
+
+        <div id="loans-section" class="loans-section hidden">
+          <h3 class="sub-title">Giocatori in prestito</h3>
+          <div id="players-loans" class="players-list"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Messaggio convocazione</h2>
+        <label for="f-convocazione">Ora convocazione (modificabile)</label>
+        <input id="f-convocazione" type="time" />
+
+        <label for="message-output">Testo convocazione</label>
+        <textarea id="message-output" rows="12" readonly></textarea>
+
+        <div class="grid-actions">
+          <button id="copy-message" type="button">Copia messaggio</button>
+          <button id="share-whatsapp" type="button" class="secondary">Apri WhatsApp</button>
+        </div>
+      </section>
+
+      <p id="status" class="status"></p>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
