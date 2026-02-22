@@ -2,9 +2,14 @@ const BASE_PUB_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pub";
 
 
+const SOCIETA = {
+  ALBA: "ALBACYNTHIA",
+  ACADEMY: "ACADEMY CYNTHIA GENZANO"
+};
+
 const CATEGORIA_SOCIETA_OVERRIDES = {
-  UNDER14I: "ALBACYNTHIA",
-  UNDER14F: "ACADEMY CYNTHIA GENZANO"
+  UNDER14I: SOCIETA.ALBA,
+  UNDER14F: SOCIETA.ACADEMY
 };
 
 const SOURCES = {
@@ -132,9 +137,24 @@ function buildCategoriaSocietaMap(rows) {
   rows.forEach((row) => {
     const categoria = extract(row, ["categoria"]);
     const societa = extract(row, ["societ", "societa"]);
-    if (categoria && societa) map.set(categoria.toLowerCase(), societa);
+    if (categoria && societa) map.set(categoria.toLowerCase(), normalizeSocietaName(societa) || societa);
   });
   return map;
+}
+
+function normalizeSocietaName(value) {
+  const cleaned = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+  if (cleaned.includes("ALBACYNTHIA")) return SOCIETA.ALBA;
+  if (cleaned.includes("ACADEMY") || cleaned.includes("CYNTHIA GENZANO")) return SOCIETA.ACADEMY;
+  return "";
+}
+
+function inferSocietaFromCategoria(categoria) {
+  const cat = (categoria || "").toUpperCase().replace(/\s+/g, "").trim();
+  if (!cat) return "";
+  if (cat.endsWith("I")) return SOCIETA.ALBA;
+  if (cat.endsWith("F")) return SOCIETA.ACADEMY;
+  return "";
 }
 
 function resolveSocietaForMatch(match) {
@@ -144,9 +164,15 @@ function resolveSocietaForMatch(match) {
     return CATEGORIA_SOCIETA_OVERRIDES[categoriaNorm];
   }
 
-  if (match.societa) return match.societa;
-  if (!match.categoria) return "";
-  return state.mappaCategoriaSocieta.get(match.categoria.toLowerCase()) || "";
+  const fromMatch = normalizeSocietaName(match.societa);
+  if (fromMatch) return fromMatch;
+
+  if (match.categoria) {
+    const fromMap = normalizeSocietaName(state.mappaCategoriaSocieta.get(match.categoria.toLowerCase()) || "");
+    if (fromMap) return fromMap;
+  }
+
+  return inferSocietaFromCategoria(match.categoria);
 }
 
 function clearFields() {
