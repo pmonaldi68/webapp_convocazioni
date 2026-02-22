@@ -40,7 +40,8 @@ const state = {
   societa: "",
   campionato: "",
   currentMatch: null,
-  selectedPlayers: new Set()
+  selectedPlayers: new Set(),
+  includeLoans: false
 };
 
 const societaSelect = document.getElementById("societa-select");
@@ -211,14 +212,14 @@ function normalizeCalciatori(rows) {
 
 function getEligibleCategories(baseCategory) {
   const base = normalizeCategory(baseCategory);
-  const extra = EXTRA_CATEGORY_RULES[base] || [];
+  const extra = state.includeLoans ? (EXTRA_CATEGORY_RULES[base] || []) : [];
   return [base, ...extra];
 }
 
 function getEligiblePlayers(baseCategory) {
   const allowed = new Set(getEligibleCategories(baseCategory));
   return state.calciatori
-    .filter((p) => allowed.has(p.categoria))
+    .filter((p) => [...allowed].some((cat) => p.categoria === cat || p.categoria.includes(cat) || cat.includes(p.categoria)))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 }
 
@@ -233,7 +234,7 @@ function renderCalciatoriByCategoria(categoria) {
 
   const players = getEligiblePlayers(categoria);
   if (!players.length) {
-    playersList.innerHTML = `<p class="hint">Nessun giocatore disponibile per ${categoria || "categoria n/d"}.</p>`;
+    playersList.innerHTML = `<p class="hint">Nessun giocatore disponibile per ${categoria || "categoria n/d"}. ${state.includeLoans ? "(prestiti inclusi)" : ""}</p>`;
     return;
   }
 
@@ -385,13 +386,33 @@ async function loadData() {
 societaSelect.addEventListener("change", (event) => {
   state.societa = event.target.value;
   state.campionato = "";
+  state.includeLoans = false;
+  document.getElementById("toggle-loans").textContent = "Includi prestiti: NO";
   renderCampionati();
   renderProssimaGara();
 });
 
 campionatoSelect.addEventListener("change", (event) => {
   state.campionato = event.target.value;
+  state.includeLoans = false;
+  document.getElementById("toggle-loans").textContent = "Includi prestiti: NO";
   renderProssimaGara();
+});
+
+document.getElementById("toggle-loans").addEventListener("click", () => {
+  if (!state.currentMatch) {
+    setStatus("Seleziona prima una gara valida.", true);
+    return;
+  }
+
+  if (!state.includeLoans) {
+    const ok = window.confirm("Vuoi includere anche i giocatori in prestito consentiti per questa categoria?");
+    if (!ok) return;
+  }
+
+  state.includeLoans = !state.includeLoans;
+  document.getElementById("toggle-loans").textContent = `Includi prestiti: ${state.includeLoans ? "SI" : "NO"}`;
+  renderCalciatoriByCategoria(state.currentMatch.categoria);
 });
 
 document.getElementById("select-20").addEventListener("click", () => quickSelect(MAX_CONVOCATI));

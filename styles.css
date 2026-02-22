@@ -167,9 +167,12 @@ button.secondary {
 }
 
 .player-item input {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   margin: 0;
+  min-width: 22px;
+  appearance: auto;
+  accent-color: #1f5eff;
 }
 
 .badge {

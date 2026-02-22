@@ -16,6 +16,7 @@ Apri `http://localhost:8000`.
 2. Seleziona il campionato disponibile per la società.
 3. L'app compila automaticamente i dati della prossima gara.
 4. Seleziona i convocati (max 20) dalla lista giocatori con pulsanti rapidi:
+   - `Includi prestiti: SI/NO` (chiede conferma prima di caricare i prestiti consentiti)
    - `Seleziona primi 20`
    - `Azzera selezione`
 
