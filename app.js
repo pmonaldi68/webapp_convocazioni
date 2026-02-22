@@ -40,14 +40,15 @@ const state = {
   societa: "",
   campionato: "",
   currentMatch: null,
-  selectedPlayers: new Set(),
-  includeLoans: false
+  selectedPlayers: new Set()
 };
 
 const societaSelect = document.getElementById("societa-select");
 const campionatoSelect = document.getElementById("campionato-select");
 const statusNode = document.getElementById("status");
-const playersList = document.getElementById("players-list");
+const playersMainNode = document.getElementById("players-main");
+const playersLoansNode = document.getElementById("players-loans");
+const loansSectionNode = document.getElementById("loans-section");
 const playerCounter = document.getElementById("players-counter");
 
 const fields = {
@@ -210,14 +211,14 @@ function normalizeCalciatori(rows) {
     .filter((row) => row.nome && row.categoria);
 }
 
-function getEligibleCategories(baseCategory) {
+function getEligibleCategories(baseCategory, includeLoans) {
   const base = normalizeCategory(baseCategory);
-  const extra = state.includeLoans ? (EXTRA_CATEGORY_RULES[base] || []) : [];
+  const extra = includeLoans ? (EXTRA_CATEGORY_RULES[base] || []) : [];
   return [base, ...extra];
 }
 
-function getEligiblePlayers(baseCategory) {
-  const allowed = new Set(getEligibleCategories(baseCategory));
+function getEligiblePlayers(baseCategory, includeLoans) {
+  const allowed = new Set(getEligibleCategories(baseCategory, includeLoans));
   return state.calciatori
     .filter((p) => [...allowed].some((cat) => p.categoria === cat || p.categoria.includes(cat) || cat.includes(p.categoria)))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
@@ -227,51 +228,77 @@ function updateCounter() {
   playerCounter.textContent = `${state.selectedPlayers.size}/${MAX_CONVOCATI}`;
 }
 
-function renderCalciatoriByCategoria(categoria) {
-  playersList.innerHTML = "";
-  state.selectedPlayers.clear();
-  updateCounter();
+function createRoleIcon(label, icon, name, playerName) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "role-tag";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.name = `${name}-${playerName}`;
+  const text = document.createElement("span");
+  text.textContent = `${icon} ${label}`;
+  wrapper.append(input, text);
+  return wrapper;
+}
 
-  const players = getEligiblePlayers(categoria);
-  if (!players.length) {
-    playersList.innerHTML = `<p class="hint">Nessun giocatore disponibile per ${categoria || "categoria n/d"}. ${state.includeLoans ? "(prestiti inclusi)" : ""}</p>`;
+function renderPlayerRow(player, container) {
+  const item = document.createElement("div");
+  item.className = "player-item";
+
+  const select = document.createElement("input");
+  select.type = "checkbox";
+  select.value = player.nome;
+  select.className = "convocato-checkbox";
+
+  const name = document.createElement("span");
+  name.className = "player-name";
+  name.textContent = player.nome;
+
+  const badge = document.createElement("span");
+  badge.className = "badge";
+  badge.textContent = player.categoria;
+
+  const roles = document.createElement("div");
+  roles.className = "roles";
+  roles.append(
+    createRoleIcon("Capitano", "🅲", "cap", player.nome),
+    createRoleIcon("Vice", "🆅", "vice", player.nome),
+    createRoleIcon("Guardalinee", "🚩", "guard", player.nome)
+  );
+
+  select.addEventListener("change", () => {
+    if (select.checked && state.selectedPlayers.size >= MAX_CONVOCATI) {
+      select.checked = false;
+      setStatus(`Puoi convocare al massimo ${MAX_CONVOCATI} giocatori.`, true);
+      return;
+    }
+
+    if (select.checked) state.selectedPlayers.add(player.nome);
+    else state.selectedPlayers.delete(player.nome);
+    updateCounter();
+  });
+
+  item.append(select, name, badge, roles);
+  container.append(item);
+}
+
+function renderPlayers(baseCategory, includeLoans) {
+  const targetNode = includeLoans ? playersLoansNode : playersMainNode;
+  targetNode.innerHTML = "";
+
+  const players = getEligiblePlayers(baseCategory, includeLoans);
+  const baseNorm = normalizeCategory(baseCategory);
+  const filtered = includeLoans ? players.filter((p) => p.categoria !== baseNorm) : players.filter((p) => p.categoria === baseNorm || p.categoria.includes(baseNorm) || baseNorm.includes(p.categoria));
+
+  if (!filtered.length) {
+    targetNode.innerHTML = `<p class="hint">Nessun giocatore ${includeLoans ? "in prestito" : "della categoria principale"}.</p>`;
     return;
   }
 
-  players.forEach((player) => {
-    const item = document.createElement("label");
-    item.className = "player-item";
-
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = player.nome;
-
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = player.categoria;
-
-    const name = document.createElement("span");
-    name.textContent = player.nome;
-
-    input.addEventListener("change", () => {
-      if (input.checked && state.selectedPlayers.size >= MAX_CONVOCATI) {
-        input.checked = false;
-        setStatus(`Puoi convocare al massimo ${MAX_CONVOCATI} giocatori.`, true);
-        return;
-      }
-
-      if (input.checked) state.selectedPlayers.add(player.nome);
-      else state.selectedPlayers.delete(player.nome);
-      updateCounter();
-    });
-
-    item.append(input, name, badge);
-    playersList.append(item);
-  });
+  filtered.forEach((player) => renderPlayerRow(player, targetNode));
 }
 
 function clearSelectedPlayers() {
-  [...playersList.querySelectorAll('input[type="checkbox"]')].forEach((cb) => {
+  [...document.querySelectorAll('.convocato-checkbox')].forEach((cb) => {
     cb.checked = false;
   });
   state.selectedPlayers.clear();
@@ -279,7 +306,7 @@ function clearSelectedPlayers() {
 }
 
 function quickSelect(limit) {
-  const checkboxes = [...playersList.querySelectorAll('input[type="checkbox"]')];
+  const checkboxes = [...document.querySelectorAll('.convocato-checkbox')];
   state.selectedPlayers.clear();
   checkboxes.forEach((cb, idx) => {
     cb.checked = idx < limit;
@@ -292,7 +319,9 @@ function clearFields() {
   Object.values(fields).forEach((f) => {
     f.value = "";
   });
-  playersList.innerHTML = "<p class=\"hint\">Seleziona campionato per vedere i giocatori.</p>";
+  playersMainNode.innerHTML = "<p class=\"hint\">Seleziona campionato per vedere i giocatori.</p>";
+  playersLoansNode.innerHTML = "";
+  loansSectionNode.classList.add("hidden");
   state.selectedPlayers.clear();
   updateCounter();
 }
@@ -357,7 +386,8 @@ function renderProssimaGara() {
   fields.ospite.value = match.squadraOspite;
   fields.campo.value = match.campoEsteso;
   fields.maps.value = match.lnkMaps;
-  renderCalciatoriByCategoria(match.categoria);
+
+  renderPlayers(match.categoria, false);
   setStatus(`Prossima gara caricata (${match.categoria}).`);
 }
 
@@ -386,37 +416,26 @@ async function loadData() {
 societaSelect.addEventListener("change", (event) => {
   state.societa = event.target.value;
   state.campionato = "";
-  state.includeLoans = false;
-  document.getElementById("toggle-loans").textContent = "Includi prestiti: NO";
   renderCampionati();
   renderProssimaGara();
 });
 
 campionatoSelect.addEventListener("change", (event) => {
   state.campionato = event.target.value;
-  state.includeLoans = false;
-  document.getElementById("toggle-loans").textContent = "Includi prestiti: NO";
   renderProssimaGara();
 });
 
-document.getElementById("toggle-loans").addEventListener("click", () => {
+document.getElementById("select-20").addEventListener("click", () => quickSelect(MAX_CONVOCATI));
+document.getElementById("clear-selected").addEventListener("click", clearSelectedPlayers);
+document.getElementById("load-loans").addEventListener("click", () => {
   if (!state.currentMatch) {
     setStatus("Seleziona prima una gara valida.", true);
     return;
   }
 
-  if (!state.includeLoans) {
-    const ok = window.confirm("Vuoi includere anche i giocatori in prestito consentiti per questa categoria?");
-    if (!ok) return;
-  }
-
-  state.includeLoans = !state.includeLoans;
-  document.getElementById("toggle-loans").textContent = `Includi prestiti: ${state.includeLoans ? "SI" : "NO"}`;
-  renderCalciatoriByCategoria(state.currentMatch.categoria);
+  loansSectionNode.classList.remove("hidden");
+  renderPlayers(state.currentMatch.categoria, true);
 });
-
-document.getElementById("select-20").addEventListener("click", () => quickSelect(MAX_CONVOCATI));
-document.getElementById("clear-selected").addEventListener("click", clearSelectedPlayers);
 
 updateCounter();
 loadData();

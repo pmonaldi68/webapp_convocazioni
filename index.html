@@ -10,7 +10,7 @@
     <main class="app">
       <header>
         <h1>Convocazioni</h1>
-        <p>Seleziona società e campionato: i dati della prossima gara si compilano in automatico.</p>
+        <p>Seleziona società e campionato: poi scegli i convocati.</p>
       </header>
 
       <section class="card">
@@ -43,15 +43,23 @@
       </section>
 
       <section class="card">
-        <h2>Calciatori (categoria gara)</h2>
+        <h2>Giocatori convocati</h2>
         <div class="players-toolbar">
           <strong>Convocati: <span id="players-counter">0/20</span></strong>
-          <button id="toggle-loans" type="button" class="secondary">Includi prestiti: NO</button>
           <button id="select-20" type="button">Seleziona primi 20</button>
           <button id="clear-selected" type="button" class="secondary">Azzera selezione</button>
         </div>
-        <div id="players-list" class="players-list">
+
+        <h3 class="sub-title">Squadra principale</h3>
+        <div id="players-main" class="players-list">
           <p class="hint">Seleziona campionato per vedere i giocatori.</p>
+        </div>
+
+        <button id="load-loans" type="button" class="secondary">Carica giocatori in prestito consentiti</button>
+
+        <div id="loans-section" class="loans-section hidden">
+          <h3 class="sub-title">Giocatori in prestito</h3>
+          <div id="players-loans" class="players-list"></div>
         </div>
       </section>
 
