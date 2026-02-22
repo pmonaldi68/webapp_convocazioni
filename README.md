@@ -24,6 +24,7 @@ Apri `http://localhost:8000`.
    - SQUADRA OSPITE
    - CAMPO ESTESO
    - LNK MAPS
+4. Sotto la gara vengono mostrati i calciatori del foglio `CALCIATORI` filtrati per la stessa `CATEGORIA` della gara trovata.
 
 ## Dati
 
@@ -39,3 +40,5 @@ Apri `http://localhost:8000`.
 
 - Esclusione automatica del campionato `SECONDA CATEGORIA` dalla selezione.
 - `CAMPO ESTESO` letto con priorità dalla colonna J del foglio gare (comprensiva di indirizzo).
+
+- Foglio `CALCIATORI` letto via endpoint CSV del foglio per nome (`sheet=CALCIATORI`).

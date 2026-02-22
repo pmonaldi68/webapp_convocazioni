@@ -1,6 +1,7 @@
 const BASE_PUB_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6/pub";
-
+const BASE_DOC_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRbVMTTTiCPOY3HFMNnN2XogbHSiFPr_7v2Q1v5ISzgrHt5xNXMgxJfpFIOiTuZtrZ0fsarubb5aGj6";
 
 const SOCIETA = {
   ALBA: "ALBACYNTHIA",
@@ -17,11 +18,13 @@ const EXCLUDED_CHAMPIONSHIPS = new Set(["SECONDA CATEGORIA"]);
 const SOURCES = {
   gare: `${BASE_PUB_URL}?output=csv`,
   squadre: `${BASE_PUB_URL}?gid=698820797&single=true&output=csv`,
-  dirigenti: `${BASE_PUB_URL}?gid=0&single=true&output=csv`
+  dirigenti: `${BASE_PUB_URL}?gid=0&single=true&output=csv`,
+  calciatori: `${BASE_DOC_URL}/gviz/tq?tqx=out:csv&sheet=CALCIATORI`
 };
 
 const state = {
   gare: [],
+  calciatori: [],
   mappaCategoriaSocieta: new Map(),
   societa: "",
   campionato: ""
@@ -30,6 +33,7 @@ const state = {
 const societaSelect = document.getElementById("societa-select");
 const campionatoSelect = document.getElementById("campionato-select");
 const statusNode = document.getElementById("status");
+const playersList = document.getElementById("players-list");
 
 const fields = {
   data: document.getElementById("f-data"),
@@ -189,10 +193,41 @@ function resolveSocietaForMatch(match) {
   return inferSocietaFromCategoria(match.categoria);
 }
 
+function normalizeCalciatori(rows) {
+  return rows
+    .map((row) => ({
+      nome: extract(row, ["nome", "giocatore", "calciatore", "cognome"]),
+      categoria: extract(row, ["categoria"])
+    }))
+    .filter((row) => row.nome && row.categoria);
+}
+
+function renderCalciatoriByCategoria(categoria) {
+  playersList.innerHTML = "";
+  const categoriaNorm = (categoria || "").replace(/\s+/g, "").toUpperCase();
+
+  const players = state.calciatori
+    .filter((p) => (p.categoria || "").replace(/\s+/g, "").toUpperCase() === categoriaNorm)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+
+  if (!players.length) {
+    playersList.innerHTML = "<p class=\"hint\">Nessun giocatore trovato per questa categoria.</p>";
+    return;
+  }
+
+  players.forEach((player) => {
+    const item = document.createElement("div");
+    item.className = "player-item";
+    item.textContent = player.nome;
+    playersList.append(item);
+  });
+}
+
 function clearFields() {
   Object.values(fields).forEach((f) => {
     f.value = "";
   });
+  playersList.innerHTML = "<p class=\"hint\">Seleziona campionato per vedere i giocatori.</p>";
 }
 
 function campionatiPerSocieta(societa) {
@@ -251,6 +286,7 @@ function renderProssimaGara() {
 
   const match = prossimaGara();
   if (!match) {
+    renderCalciatoriByCategoria("");
     setStatus("Nessuna prossima gara trovata per i filtri selezionati.", true);
     return;
   }
@@ -264,24 +300,27 @@ function renderProssimaGara() {
   fields.ospite.value = match.squadraOspite;
   fields.campo.value = match.campoEsteso;
   fields.maps.value = match.lnkMaps;
+  renderCalciatoriByCategoria(match.categoria);
 
-  setStatus("Prossima gara caricata automaticamente.");
+  setStatus(`Prossima gara caricata automaticamente (${match.categoria || "categoria n/d"}).`);
 }
 
 async function loadData() {
   setStatus("Caricamento dati...");
   try {
-    const [gareCsv, squadreCsv] = await Promise.all([
+    const [gareCsv, squadreCsv, calciatoriCsv] = await Promise.all([
       fetch(SOURCES.gare).then((r) => r.text()),
-      fetch(SOURCES.squadre).then((r) => r.text())
+      fetch(SOURCES.squadre).then((r) => r.text()),
+      fetch(SOURCES.calciatori).then((r) => r.text())
     ]);
 
     state.gare = normalizeGare(parseCsv(gareCsv));
+    state.calciatori = normalizeCalciatori(parseCsv(calciatoriCsv));
     state.mappaCategoriaSocieta = buildCategoriaSocietaMap(parseCsv(squadreCsv));
 
     renderCampionati();
     clearFields();
-    setStatus(`Dati caricati: ${state.gare.length} gare.`);
+    setStatus(`Dati caricati: ${state.gare.length} gare, ${state.calciatori.length} calciatori.`);
   } catch (error) {
     console.error(error);
     setStatus("Errore nel caricamento del foglio Google. Verifica pubblicazione e permessi.", true);
